@@ -1,0 +1,60 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version, for example v1.0.0
+        required: true
+        default: v0.1.0
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++-mingw-w64-x86-64 gcc-mingw-w64-x86-64 zip
+
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            version="${GITHUB_REF_NAME}"
+          else
+            version="${{ github.event.inputs.version }}"
+          fi
+          echo "value=${version}" >> "${GITHUB_OUTPUT}"
+
+      - name: Build Windows package
+        run: ./build-windows.sh
+
+      - name: Package release zip
+        run: ./scripts/package-release.sh "${{ steps.version.outputs.value }}"
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MetaphorAudioFix-${{ steps.version.outputs.value }}-win64
+          path: |
+            dist/MetaphorAudioFix-${{ steps.version.outputs.value }}-win64.zip
+            dist/MetaphorAudioFix-${{ steps.version.outputs.value }}-win64.zip.sha256
+          if-no-files-found: error
+
+      - name: Publish GitHub release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/MetaphorAudioFix-${{ steps.version.outputs.value }}-win64.zip
+            dist/MetaphorAudioFix-${{ steps.version.outputs.value }}-win64.zip.sha256
+
