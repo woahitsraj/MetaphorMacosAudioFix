@@ -245,13 +245,12 @@ void LogMasteringVoiceResult(HRESULT result, IXAudio2MasteringVoice* mastering_v
     mastering_voice->GetVoiceDetails(&details);
 
     DWORD channel_mask = 0;
-    const HRESULT mask_result = mastering_voice->GetChannelMask(&channel_mask);
+    mastering_voice->GetChannelMask(&channel_mask);
 
     Log::Info(
-        "CreateMasteringVoice result=0x%08lX actual_channels=%u channel_mask_result=0x%08lX channel_mask=0x%08lX",
+        "CreateMasteringVoice result=0x%08lX actual_channels=%u channel_mask=0x%08lX",
         static_cast<unsigned long>(result),
         details.InputChannels,
-        static_cast<unsigned long>(mask_result),
         static_cast<unsigned long>(channel_mask)
     );
 }
