@@ -52,11 +52,10 @@ int RunCase(const char* label, UINT32 requested_channels)
         mastering_voice->GetVoiceDetails(&details);
 
         DWORD channel_mask = 0;
-        const HRESULT mask_hr = mastering_voice->GetChannelMask(&channel_mask);
+        mastering_voice->GetChannelMask(&channel_mask);
 
-        std::printf("actual_channels=%u mask_hr=0x%08lX channel_mask=0x%08lX\n",
+        std::printf("actual_channels=%u channel_mask=0x%08lX\n",
                     details.InputChannels,
-                    static_cast<unsigned long>(mask_hr),
                     static_cast<unsigned long>(channel_mask));
 
         mastering_voice->DestroyVoice();
