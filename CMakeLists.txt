@@ -17,10 +17,63 @@ execute_process(
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
+execute_process(
+    COMMAND ${CMAKE_CXX_COMPILER} -print-file-name=libwinpthread-1.dll
+    OUTPUT_VARIABLE WINPTHREAD_DLL_PATH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+execute_process(
+    COMMAND ${CMAKE_CXX_COMPILER} -dumpmachine
+    OUTPUT_VARIABLE MINGW_TRIPLE
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+execute_process(
+    COMMAND ${CMAKE_CXX_COMPILER} -print-sysroot
+    OUTPUT_VARIABLE MINGW_SYSROOT
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
 file(REAL_PATH "${WINPTHREAD_STATIC_PATH}" WINPTHREAD_STATIC_PATH)
 get_filename_component(WINPTHREAD_LIB_DIR "${WINPTHREAD_STATIC_PATH}" DIRECTORY)
 get_filename_component(WINPTHREAD_ROOT_DIR "${WINPTHREAD_LIB_DIR}" DIRECTORY)
-set(WINPTHREAD_DLL_PATH "${WINPTHREAD_ROOT_DIR}/bin/libwinpthread-1.dll")
+get_filename_component(COMPILER_DIR "${CMAKE_CXX_COMPILER}" DIRECTORY)
+
+if (IS_ABSOLUTE "${WINPTHREAD_DLL_PATH}" AND EXISTS "${WINPTHREAD_DLL_PATH}")
+    file(REAL_PATH "${WINPTHREAD_DLL_PATH}" WINPTHREAD_DLL_PATH)
+else()
+    unset(WINPTHREAD_DLL_PATH)
+    unset(WINPTHREAD_DLL_PATH CACHE)
+    find_file(WINPTHREAD_DLL_PATH
+        NAMES libwinpthread-1.dll
+        PATHS
+            "${WINPTHREAD_LIB_DIR}"
+            "${WINPTHREAD_ROOT_DIR}"
+            "${WINPTHREAD_ROOT_DIR}/bin"
+            "${WINPTHREAD_ROOT_DIR}/lib"
+            "${COMPILER_DIR}"
+            "${COMPILER_DIR}/../bin"
+            "${COMPILER_DIR}/../lib"
+            "${MINGW_SYSROOT}/bin"
+            "${MINGW_SYSROOT}/lib"
+            "/usr/${MINGW_TRIPLE}/bin"
+            "/usr/${MINGW_TRIPLE}/lib"
+            "/usr/${MINGW_TRIPLE}/sys-root/mingw/bin"
+    )
+
+    if (NOT WINPTHREAD_DLL_PATH AND EXISTS "/usr/lib/gcc/${MINGW_TRIPLE}")
+        file(GLOB_RECURSE WINPTHREAD_DLL_CANDIDATES "/usr/lib/gcc/${MINGW_TRIPLE}/*/libwinpthread-1.dll")
+        list(LENGTH WINPTHREAD_DLL_CANDIDATES WINPTHREAD_DLL_COUNT)
+        if (WINPTHREAD_DLL_COUNT GREATER 0)
+            list(GET WINPTHREAD_DLL_CANDIDATES 0 WINPTHREAD_DLL_PATH)
+        endif()
+    endif()
+endif()
+
+if (NOT EXISTS "${WINPTHREAD_DLL_PATH}")
+    message(FATAL_ERROR "Could not locate libwinpthread-1.dll for packaging")
+endif()
 
 add_library(MetaphorAudioFix SHARED
     src/config.cpp
