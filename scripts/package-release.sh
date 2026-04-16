@@ -22,6 +22,8 @@ mkdir -p "${staging_dir}"
 cp "${package_dir}/MetaphorAudioFix.asi" "${staging_dir}/"
 cp "${package_dir}/MetaphorAudioFix.ini" "${staging_dir}/"
 cp "${package_dir}/libwinpthread-1.dll" "${staging_dir}/"
+cp "${package_dir}/winmm.dll" "${staging_dir}/"
+cp "${package_dir}/Ultimate-ASI-Loader-LICENSE.txt" "${staging_dir}/"
 cp "${root_dir}/README.md" "${staging_dir}/"
 cp "${root_dir}/LICENSE" "${staging_dir}/"
 
@@ -42,4 +44,3 @@ echo "Created ${zip_path}"
 if [[ -f "${sha_path}" ]]; then
   echo "Created ${sha_path}"
 fi
-

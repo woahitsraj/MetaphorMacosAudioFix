@@ -16,7 +16,6 @@ struct Config {
     bool spatial_wrapper_enabled = true;
     int module_poll_timeout_ms = 120000;
     int module_poll_interval_ms = 250;
-    bool verbose_logging = true;
 };
 
 Config LoadConfig(const std::filesystem::path& path);

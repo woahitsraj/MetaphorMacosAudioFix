@@ -118,10 +118,6 @@ Config LoadConfig(const std::filesystem::path& path)
             } else if (key == "modulepollintervalms") {
                 config.module_poll_interval_ms = ParseInt(value, config.module_poll_interval_ms);
             }
-        } else if (current_section == "logging") {
-            if (key == "verbose") {
-                config.verbose_logging = ParseBool(value, config.verbose_logging);
-            }
         }
     }
 

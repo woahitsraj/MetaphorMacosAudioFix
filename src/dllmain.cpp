@@ -8,7 +8,6 @@
 namespace {
 constexpr std::wstring_view kFixName = L"MetaphorAudioFix";
 constexpr std::wstring_view kConfigName = L"MetaphorAudioFix.ini";
-constexpr std::wstring_view kLogName = L"MetaphorAudioFix.log";
 
 constexpr std::wstring_view kXAudio27 = L"xaudio2_7.dll";
 constexpr std::wstring_view kXAudio28 = L"xaudio2_8.dll";
@@ -1701,7 +1700,7 @@ DWORD WINAPI MainThread(void*)
     g_module_dir = std::filesystem::path(module_path).parent_path();
 
     g_config = LoadConfig(g_module_dir / kConfigName);
-    Log::Init(g_module_dir / kLogName, g_config.verbose_logging);
+    Log::Init({}, false);
 
     Log::Info("%s loaded from %s", Narrow(kFixName).c_str(), Narrow(g_module_dir.wstring()).c_str());
     Log::Info("Config: xaudio2_enabled=%d force_stereo_mastering_voice=%d override_explicit_multichannel_voices=%d",
@@ -1718,10 +1717,9 @@ DWORD WINAPI MainThread(void*)
               g_config.reject_multichannel_is_format_supported,
               g_config.reject_multichannel_initialize);
     Log::Info("Config: spatial_wrapper_enabled=%d", g_config.spatial_wrapper_enabled);
-    Log::Info("Config: module_poll_timeout_ms=%d module_poll_interval_ms=%d verbose_logging=%d",
+    Log::Info("Config: module_poll_timeout_ms=%d module_poll_interval_ms=%d",
               g_config.module_poll_timeout_ms,
-              g_config.module_poll_interval_ms,
-              g_config.verbose_logging);
+              g_config.module_poll_interval_ms);
 
     const MH_STATUS init_status = MH_Initialize();
     if (init_status != MH_OK && init_status != MH_ERROR_ALREADY_INITIALIZED) {

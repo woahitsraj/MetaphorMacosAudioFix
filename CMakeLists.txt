@@ -75,6 +75,17 @@ if (NOT EXISTS "${WINPTHREAD_DLL_PATH}")
     message(FATAL_ERROR "Could not locate libwinpthread-1.dll for packaging")
 endif()
 
+set(ASI_LOADER_DLL_PATH "${CMAKE_SOURCE_DIR}/third_party/Ultimate-ASI-Loader/winmm.dll")
+set(ASI_LOADER_LICENSE_PATH "${CMAKE_SOURCE_DIR}/third_party/Ultimate-ASI-Loader/LICENSE.txt")
+
+if (NOT EXISTS "${ASI_LOADER_DLL_PATH}")
+    message(FATAL_ERROR "Could not locate bundled ASI loader: ${ASI_LOADER_DLL_PATH}")
+endif()
+
+if (NOT EXISTS "${ASI_LOADER_LICENSE_PATH}")
+    message(FATAL_ERROR "Could not locate bundled ASI loader license: ${ASI_LOADER_LICENSE_PATH}")
+endif()
+
 add_library(MetaphorAudioFix SHARED
     src/config.cpp
     src/dllmain.cpp
@@ -147,6 +158,8 @@ add_custom_command(TARGET MetaphorAudioFix POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:MetaphorAudioFix> ${CMAKE_BINARY_DIR}/package/
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/MetaphorAudioFix.ini ${CMAKE_BINARY_DIR}/package/
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${WINPTHREAD_DLL_PATH} ${CMAKE_BINARY_DIR}/package/
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ASI_LOADER_DLL_PATH} ${CMAKE_BINARY_DIR}/package/
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ASI_LOADER_LICENSE_PATH} ${CMAKE_BINARY_DIR}/package/Ultimate-ASI-Loader-LICENSE.txt
 )
 
 add_custom_command(TARGET smoke_xaudio2 POST_BUILD

@@ -29,20 +29,79 @@ That produces:
 - `build/windows/package/MetaphorAudioFix.asi`
 - `build/windows/package/MetaphorAudioFix.ini`
 - `build/windows/package/libwinpthread-1.dll`
+- `build/windows/package/winmm.dll`
+- `build/windows/package/Ultimate-ASI-Loader-LICENSE.txt`
 
 ## Install
 
-1. Put an ASI loader `winmm.dll` in the game directory. You can use Ultimate ASI Loader or the loader that comes with other Lyall-style fixes.
-2. Copy `MetaphorAudioFix.asi`, `MetaphorAudioFix.ini`, and `libwinpthread-1.dll` into the same directory as `METAPHOR.exe`.
-3. On Wine or CrossOver, make sure `winmm` is loaded as native first.
+The packaged fix now includes a bundled `winmm.dll` ASI loader, so all required files ship together.
 
-Steam launch option form:
+1. Open the game install directory in Steam:
+   `Metaphor: ReFantazio` -> `Properties...` -> `Installed Files` -> `Browse...`
+2. Copy these four files into the same directory as `METAPHOR.exe`:
+   - `winmm.dll`
+   - `MetaphorAudioFix.asi`
+   - `MetaphorAudioFix.ini`
+   - `libwinpthread-1.dll`
+3. Make sure Wine/CrossOver loads `winmm` as `native,builtin`.
+
+### Steam DLL Override
+
+If you launch the game through Steam inside Wine, Proton, or a CrossOver Steam bottle, set the DLL override directly on the game in Steam:
+
+1. In Steam, right-click `Metaphor: ReFantazio`.
+2. Click `Properties...`.
+3. Stay on the `General` tab.
+4. Find the `Launch Options` box near the bottom.
+5. Paste this exactly:
 
 ```text
 WINEDLLOVERRIDES="winmm=n,b" %command%
 ```
 
-On CrossOver you can also set the equivalent per-app DLL override in the bottle registry.
+6. Close the Properties window.
+7. Launch the game from Steam normally.
+
+`n,b` is Wine shorthand for `native,builtin`, which makes Wine try the bundled `winmm.dll` in the game folder first and fall back to Wine's builtin `winmm` only if needed.
+
+### Bottle Registry Override
+
+If you prefer to set the override in the bottle itself instead of using a Steam launch option, add the DLL override in the bottle registry:
+
+1. Open CrossOver.
+2. Select the bottle that contains Steam and `Metaphor: ReFantazio`.
+3. Choose `Run Command...` for that bottle.
+4. Run `regedit`.
+5. In Registry Editor, go to:
+
+```text
+HKEY_CURRENT_USER\Software\Wine\DllOverrides
+```
+
+6. If `DllOverrides` does not exist, create it:
+   - Right-click `Wine`
+   - `New` -> `Key`
+   - Name it `DllOverrides`
+7. With `DllOverrides` selected, create a new string value:
+   - Right-click in the right pane
+   - `New` -> `String Value`
+   - Name: `winmm`
+8. Double-click the new `winmm` value and set its data to:
+
+```text
+native,builtin
+```
+
+9. Close Registry Editor.
+10. Fully quit Steam inside the bottle, then start Steam again before launching the game.
+
+If you prefer the command-line form, the same registry override can be created with:
+
+```text
+reg add "HKEY_CURRENT_USER\Software\Wine\DllOverrides" /v winmm /t REG_SZ /d native,builtin /f
+```
+
+Do not set both a conflicting registry override and a conflicting Steam launch option. If both exist with the same `native,builtin` value, that is fine.
 
 ## Release Zip
 
@@ -72,20 +131,10 @@ The workflow:
 - uploads the zip as a workflow artifact
 - publishes a GitHub release automatically for tag pushes
 
-## Logging
-
-When the plugin is active, it writes `MetaphorAudioFix.log` next to the game executable.
-
-Useful lines include:
-
-- `Returning wrapped ISpatialAudioClient`
-- `Spatial wrapper ActivateSpatialAudioStream`
-- `Spatial wrapper initializing stereo stream`
-
 ## Root Cause Notes
 
 See [`docs/WINE_SPATIAL_AUDIO_NOTES.md`](docs/WINE_SPATIAL_AUDIO_NOTES.md) for the issue write-up you can attach to a Wine bug or send to CodeWeavers.
 
 ## License
 
-This project is under the MIT license. `MinHook` remains under its own license in `external-minhook/`.
+This project is under the MIT license. `MinHook` remains under its own license in `external-minhook/`. The bundled `winmm.dll` comes from [Ultimate ASI Loader](https://github.com/ThirteenAG/Ultimate-ASI-Loader), which is also MIT licensed; its license text is included as `Ultimate-ASI-Loader-LICENSE.txt`.
