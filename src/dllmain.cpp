@@ -2,6 +2,7 @@
 
 #include "config.hpp"
 #include "log.hpp"
+#include "spatial_stream_lifecycle.hpp"
 
 #include <MinHook.h>
 
@@ -672,6 +673,7 @@ public:
     WAVEFORMATEX* object_format_ = nullptr;
     WAVEFORMATEXTENSIBLE output_format_{};
     std::list<SpatialRenderObject*> objects_;
+    SpatialStreamLifecycle lifecycle_;
 
     friend class SpatialRenderObject;
 };
@@ -978,17 +980,86 @@ HRESULT STDMETHODCALLTYPE SpatialRenderStream::GetService(REFIID, void** service
 
 HRESULT STDMETHODCALLTYPE SpatialRenderStream::Start()
 {
-    return audio_client_ ? audio_client_->Start() : E_FAIL;
+    if (!audio_client_) {
+        return E_FAIL;
+    }
+
+    EnterCriticalSection(&lock_);
+    const HRESULT hr = audio_client_->Start();
+    lifecycle_.OnStartResult(SUCCEEDED(hr));
+    Log::Info("SPATIAL_LIFECYCLE start stream=%p result=0x%08lX started=%d",
+              this,
+              static_cast<unsigned long>(hr),
+              lifecycle_.Started());
+    LeaveCriticalSection(&lock_);
+    return hr;
 }
 
 HRESULT STDMETHODCALLTYPE SpatialRenderStream::Stop()
 {
-    return audio_client_ ? audio_client_->Stop() : E_FAIL;
+    if (!audio_client_) {
+        return E_FAIL;
+    }
+
+    EnterCriticalSection(&lock_);
+    const HRESULT stop_hr = audio_client_->Stop();
+    lifecycle_.OnStopResult(SUCCEEDED(stop_hr));
+    Log::Info("SPATIAL_LIFECYCLE stop stream=%p result=0x%08lX started=%d",
+              this,
+              static_cast<unsigned long>(stop_hr),
+              lifecycle_.Started());
+
+    LeaveCriticalSection(&lock_);
+    return stop_hr;
 }
 
 HRESULT STDMETHODCALLTYPE SpatialRenderStream::Reset()
 {
-    return audio_client_ ? audio_client_->Reset() : E_FAIL;
+    if (!audio_client_) {
+        return E_FAIL;
+    }
+
+    EnterCriticalSection(&lock_);
+    const HRESULT audio_hr = audio_client_->Reset();
+    const bool not_stopped = audio_hr == AUDCLNT_E_NOT_STOPPED;
+    const auto action = lifecycle_.OnResetResult(
+        SUCCEEDED(audio_hr),
+        not_stopped,
+        g_config.recover_reset_before_stop
+    );
+    HRESULT result = not_stopped ? SPTLAUDCLNT_E_STREAM_NOT_STOPPED : audio_hr;
+
+    if (action == SpatialStreamLifecycle::ResetAction::Recover) {
+        const HRESULT stop_hr = audio_client_->Stop();
+        const HRESULT reset_hr = SUCCEEDED(stop_hr) ? audio_client_->Reset() : E_FAIL;
+        const HRESULT start_hr = SUCCEEDED(reset_hr) ? audio_client_->Start() : E_FAIL;
+        const bool recovered = SUCCEEDED(stop_hr) && SUCCEEDED(reset_hr) && SUCCEEDED(start_hr);
+        lifecycle_.OnRecoveryResult(SUCCEEDED(stop_hr), SUCCEEDED(start_hr));
+        if (recovered) {
+            result = S_OK;
+        } else if (FAILED(stop_hr)) {
+            result = stop_hr;
+        } else if (FAILED(reset_hr)) {
+            result = reset_hr;
+        } else {
+            result = start_hr;
+        }
+        Log::Warn("SPATIAL_LIFECYCLE reset-before-stop recovery stream=%p stop=0x%08lX reset=0x%08lX start=0x%08lX recovered=%d",
+                  this,
+                  static_cast<unsigned long>(stop_hr),
+                  static_cast<unsigned long>(reset_hr),
+                  static_cast<unsigned long>(start_hr),
+                  recovered);
+    }
+
+    Log::Warn("SPATIAL_LIFECYCLE reset stream=%p audio_result=0x%08lX result=0x%08lX started=%d recovery_attempted=%d",
+              this,
+              static_cast<unsigned long>(audio_hr),
+              static_cast<unsigned long>(result),
+              lifecycle_.Started(),
+              action == SpatialStreamLifecycle::ResetAction::Recover);
+    LeaveCriticalSection(&lock_);
+    return result;
 }
 
 HRESULT STDMETHODCALLTYPE SpatialRenderStream::BeginUpdatingAudioObjects(UINT32* dynamic_count, UINT32* frames)
@@ -1700,7 +1771,7 @@ DWORD WINAPI MainThread(void*)
     g_module_dir = std::filesystem::path(module_path).parent_path();
 
     g_config = LoadConfig(g_module_dir / kConfigName);
-    Log::Init({}, false);
+    Log::Init(g_module_dir / L"MetaphorAudioFix.log", false);
 
     Log::Info("%s loaded from %s", Narrow(kFixName).c_str(), Narrow(g_module_dir.wstring()).c_str());
     Log::Info("Config: xaudio2_enabled=%d force_stereo_mastering_voice=%d override_explicit_multichannel_voices=%d",
@@ -1716,7 +1787,9 @@ DWORD WINAPI MainThread(void*)
               g_config.disable_spatial_audio_client,
               g_config.reject_multichannel_is_format_supported,
               g_config.reject_multichannel_initialize);
-    Log::Info("Config: spatial_wrapper_enabled=%d", g_config.spatial_wrapper_enabled);
+    Log::Info("Config: spatial_wrapper_enabled=%d recover_reset_before_stop=%d",
+              g_config.spatial_wrapper_enabled,
+              g_config.recover_reset_before_stop);
     Log::Info("Config: module_poll_timeout_ms=%d module_poll_interval_ms=%d",
               g_config.module_poll_timeout_ms,
               g_config.module_poll_interval_ms);

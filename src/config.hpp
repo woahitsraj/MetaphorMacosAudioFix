@@ -14,6 +14,7 @@ struct Config {
     bool reject_multichannel_is_format_supported = true;
     bool reject_multichannel_initialize = true;
     bool spatial_wrapper_enabled = true;
+    bool recover_reset_before_stop = true;
     int module_poll_timeout_ms = 120000;
     int module_poll_interval_ms = 250;
 };

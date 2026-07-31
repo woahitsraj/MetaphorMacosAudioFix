@@ -111,6 +111,8 @@ Config LoadConfig(const std::filesystem::path& path)
         } else if (current_section == "spatial") {
             if (key == "wrapperenabled") {
                 config.spatial_wrapper_enabled = ParseBool(value, config.spatial_wrapper_enabled);
+            } else if (key == "recoverresetbeforestop") {
+                config.recover_reset_before_stop = ParseBool(value, config.recover_reset_before_stop);
             }
         } else if (current_section == "bootstrap") {
             if (key == "modulepolltimeoutms") {

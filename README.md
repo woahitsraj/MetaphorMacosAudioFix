@@ -8,6 +8,12 @@ The game uses `ISpatialAudioClient` and builds a `12-channel` static object bed 
 
 This repo contains the working fix that was validated in-game on CrossOver for macOS with the dialogue issue reproduced beforehand.
 
+The spatial wrapper also repairs a CrossOver lifecycle failure where the game requests `Reset` while the output is still running. The repair can be disabled by setting `RecoverResetBeforeStop = false` under `[Spatial]`.
+
+## Diagnostics
+
+The plugin appends lifecycle and initialization events to `MetaphorAudioFix.log` next to `METAPHOR.exe`. If audio stops, attach that file and note roughly when the sound disappeared.
+
 ## Repository Layout
 
 - `src/`: plugin source
